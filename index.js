@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, interaction, EmbedBuilder, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { commands, maps } = require('./command.js');
+const { commands } = require('./command.js');
+const { Random } = require("random-js");
+const random = new Random();
 const keepAlive = require('./server.js');
 const moment = require('moment');
 require('moment-timezone');
@@ -8,13 +10,14 @@ moment.tz.setDefault("Asia/Seoul");
 
 const mongoose = require('mongoose');
 const ScMatch = require('./schemas/scmatch.js');
+const ScMap = require('./schemas/scmap.js');
 
 const applicaitonId = process.env['application_id'];
 const token = process.env['token'];
 const clientId = process.env['client_id'];
 const uri = process.env['uri'];
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers,] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 const rest = new REST({ version: '10' }).setToken(token);
 
 mongoose.connect(uri, {
@@ -24,10 +27,9 @@ mongoose.connect(uri, {
     if (err) {
         console.error('mongodb connection error', err);
     }
-    console.log('mongodb connected');
 });
 
-mongoose.connection.on('open', function() {
+mongoose.connection.on('open', async function() {
     console.log('mongoose opened');
 });
 
@@ -52,18 +54,22 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.commandName === '뽑기') {
 
-        const embed = new EmbedBuilder()
+        const maps = await ScMap.find({ 'isUsing': true }).sort({ 'people': 1, 'description': 'asc' });
+
+        let embed = new EmbedBuilder()
             .setColor('Red')
             .setTitle('맵 리스트')
-            .setURL('https://910map.tistory.com/')
-            .addFields(
-                { name: '(2)신 단장의 능선 2.2', value: 'ASL15 Official', inline: false },
-                { name: '(3)Neo_Sylphid 3.0', value: 'ASL15 Official', inline: false },
-                { name: '(4)Retro 0.95', value: 'ASL15 Official', inline: false },
-                { name: '(4)Vermeer SE 2.1', value: 'ASL15 Official', inline: false },
-                { name: '(4)투혼 1.3', value: '시즌11 래더공식맵', inline: false }, // eud 투혼맵
-                // 컨셉맵 (76), 다크오리진, 알레그로, 폴리포이드
-            )
+            .setURL('https://910map.tistory.com/');
+
+        maps.forEach(map => {
+            const field = {
+                'name': map.name,
+                'value': map.description,
+                'inline': false,
+            }
+
+            embed.addFields(field);
+        });
 
         const row = new ActionRowBuilder()
             .addComponents(
@@ -88,7 +94,6 @@ client.on(Events.InteractionCreate, async interaction => {
         let result = [];
 
         matches.forEach(match => {
-
             const aP = members.get(match.aPlyr);
             const bP = members.get(match.bPlyr);
 
@@ -122,32 +127,29 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
             }
 
-            let description = null;
-            let name = null;
-
             const nowMoment = moment(match.savedAt);
             const today = nowMoment.format('YYYY/MM/DD HH:mm:ss');
-            
-            if (lSco >= 2) {
-                name = `${today}, 승리: ${finalWinner})`;
-                description = `대진: ${aName} vs ${bName}, 스코어: [${lSco} : ${rSco}]`;
-            } else {
-                name = `${today}, 승리: ${finalWinner})`;
-                description = `대진: ${aName} vs ${bName}, 스코어: [${lSco} : ${rSco}]`;
-            }
 
             const content = {
-                'name': name,
-                'value': description
+                'name': `${today}, 승리: ${finalWinner})`,
+                'value': `대진: ${aName} vs ${bName}, 스코어: [${lSco} : ${rSco}]`
             }
 
             result.push(content);
         });
 
+        let notice = null;
+
+        if (matches.length === 0) {
+            notice = '조회된 결과가 없습니다.';
+        } else {
+            notice = '최근 매치결과입니다.';
+        }
+
         let matchList = new EmbedBuilder()
             .setColor('Red')
             .setTitle('매치 결과조회')
-            .setDescription('최근 매치결과입니다.(최대 10개)')
+            .setDescription(notice)
             .setTimestamp();
 
         result.forEach(item => {
@@ -171,13 +173,32 @@ client.on(Events.InteractionCreate, async interaction => {
     const members = await guild.members.fetch();
 
     if (interaction.customId === 'noban') {
-        let selectMaps = maps.slice();
+        let maps = await ScMap.find({ 'isUsing': true }).sort({ 'people': 1, 'description': 'asc' });
         let matchMaps = [];
 
-        for (let i = 0; i < 3; i++) {
-            let random = Math.floor(Math.random() * selectMaps.length);
-            matchMaps.push(selectMaps[random]);
-            selectMaps.splice(random, 1);
+        let peopleFlag = false;
+
+        while (matchMaps.length < 3) {
+            let n = random.integer(0, maps.length - 1);
+            let map = maps[n];
+
+            if (map.isUniq === true) {
+                if (random.integer(1, 100) >= 70 ? true : false) {
+                    map.name = map.name + ' 유니크';
+                }
+            }
+
+            if (map.people === 2) {
+                if (peopleFlag === false) {
+                    peopleFlag = true;
+                } else {
+                    maps.splice(n, 1);
+                    continue;
+                }
+            }
+
+            matchMaps.push(map);
+            maps.splice(n, 1);
         }
 
         const nice = new EmbedBuilder()
@@ -185,9 +206,9 @@ client.on(Events.InteractionCreate, async interaction => {
             .setURL('https://910map.tistory.com/')
             .setTitle('맵 선택결과')
             .addFields(
-                { name: '1경기', value: matchMaps[0].value },
-                { name: '2경기', value: matchMaps[1].value },
-                { name: '3경기', value: matchMaps[2].value },
+                { name: '1경기', value: matchMaps[0].name },
+                { name: '2경기', value: matchMaps[1].name },
+                { name: '3경기', value: matchMaps[2].name },
             )
             .setDescription('Good Luck 🍀');
 
@@ -238,7 +259,6 @@ client.on(Events.InteractionCreate, async interaction => {
 
     const guildId = interaction.guildId;
     const guild = await client.guilds.fetch(guildId);
-
     const members = await guild.members.fetch();
     const selectValues = interaction.values;
 
@@ -325,6 +345,8 @@ client.on(Events.InteractionCreate, async interaction => {
                 winner = bName;
             }
 
+            console.log('match', match);
+
             await ScMatch.updateOne({ _id: key }, { 'isComplete': true, 'savedAt': new Date(), 'cGm': null });
 
             const resultEmbed = new EmbedBuilder()
@@ -333,9 +355,9 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setDescription(today)
                 .addFields(
                     { name: '매치업', value: `${aName} vs ${bName}` },
-                    { name: '1세트: ' + match.maps[0].label, value: winner },
-                    { name: '2세트: ' + match.maps[1].label, value: winner },
-                    { name: '3세트: ' + match.maps[2].label, value: '경기없음' },
+                    { name: '1세트: ' + match.maps[0].name, value: winner },
+                    { name: '2세트: ' + match.maps[1].name, value: winner },
+                    { name: '3세트: ' + match.maps[2].name, value: '경기없음' },
                     { name: '승자', value: `${winner} 🔥` },
                 )
                 .setTimestamp();
@@ -359,7 +381,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId.split('||')[0] === 'insertResultEnd') {
 
         const match = await ScMatch.findOne({ _id: key });
-        
+
         let cGame = members.get(selectValues[0]).user.id;
 
         const aPlyr = members.get(match.aPlyr);
@@ -388,15 +410,17 @@ client.on(Events.InteractionCreate, async interaction => {
 
         await ScMatch.updateOne({ _id: key }, { 'cGm': cGame, 'isComplete': true, 'savedAt': new Date() });
 
+        console.log('match', match);
+
         const resultEmbed = new EmbedBuilder()
             .setColor('Red')
             .setTitle('저장된 매치결과')
             .setDescription(today)
             .addFields(
                 { name: '매치업', value: `${aName} vs ${bName}` },
-                { name: '1세트: ' + match.maps[0].label, value: fWinner },
-                { name: '2세트: ' + match.maps[1].label, value: sWinner },
-                { name: '3세트: ' + match.maps[2].label, value: tWinner },
+                { name: '1세트: ' + match.maps[0].name, value: fWinner },
+                { name: '2세트: ' + match.maps[1].name, value: sWinner },
+                { name: '3세트: ' + match.maps[2].name, value: tWinner },
                 { name: '승자', value: `${tWinner} 🔥` },
             )
             .setTimestamp();
