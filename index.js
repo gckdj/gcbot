@@ -12,10 +12,14 @@ const mongoose = require('mongoose');
 const ScMatch = require('./schemas/scmatch.js');
 const ScMap = require('./schemas/scmap.js');
 
+const fetch = require('@replit/node-fetch');
+
 const applicaitonId = process.env['application_id'];
 const token = process.env['token'];
 const clientId = process.env['client_id'];
 const uri = process.env['uri'];
+const naverClientId = process.env['nClientId'];
+const naverSecret = process.env['nClientSecret']
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 const rest = new REST({ version: '10' }).setToken(token);
@@ -157,6 +161,27 @@ client.on(Events.InteractionCreate, async interaction => {
         });
 
         interaction.reply({ embeds: [matchList] });
+    }
+
+    if (interaction.commandName === '맛집') {
+
+        const query = '거창 고깃집';
+        const ranStart = random.integer(0, 500);
+        
+        await fetch(`https://openapi.naver.com/v1/search/local?query=${query}&display=10&start=10&sort=random`, {
+            'method': 'GET',
+            'headers': {
+                'X-Naver-Client-Id': `${naverClientId}`,
+                'X-Naver-Client-Secret': `${naverSecret}`
+            },
+        })
+        .then((res) => {
+            return res.json();
+        })
+        .then(data => {
+            console.log(data);
+        })
+        .catch(console.error.bind(console));
     }
 });
 
