@@ -35,6 +35,13 @@ mongoose.connect(uri, {
 
 mongoose.connection.on('open', async function() {
     console.log('mongoose opened');
+
+    const filter = { age: { $gte: 30 } };
+    const aggregate = await ScMatch.aggregate().group({
+        _id: '_id',
+        count: { $sum: 1 }
+    });
+    console.log('aggregate', aggregate);
 });
 
 (async () => {
@@ -167,7 +174,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const query = '거창 고깃집';
         const ranStart = random.integer(0, 500);
-        
+
         await fetch(`https://openapi.naver.com/v1/search/local?query=${query}&display=10&start=10&sort=random`, {
             'method': 'GET',
             'headers': {
@@ -175,13 +182,13 @@ client.on(Events.InteractionCreate, async interaction => {
                 'X-Naver-Client-Secret': `${naverSecret}`
             },
         })
-        .then((res) => {
-            return res.json();
-        })
-        .then(data => {
-            console.log(data);
-        })
-        .catch(console.error.bind(console));
+            .then((res) => {
+                return res.json();
+            })
+            .then(data => {
+                console.log(data);
+            })
+            .catch(console.error.bind(console));
     }
 });
 
