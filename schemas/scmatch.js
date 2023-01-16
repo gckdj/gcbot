@@ -9,7 +9,10 @@ const scMatch = new Schema({
     bGm: String,
     cGm: String,
     savedAt: Date,
-    isComplete: Boolean
+    isComplete: Boolean,
+    lSco: Number,
+    rSco: Number,
+    finalWinner: String
 });
 
 module.exports = mongoose.model('ScMatch', scMatch);

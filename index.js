@@ -36,12 +36,39 @@ mongoose.connect(uri, {
 mongoose.connection.on('open', async function() {
     console.log('mongoose opened');
 
-    const filter = { age: { $gte: 30 } };
-    const aggregate = await ScMatch.aggregate().group({
-        _id: '_id',
-        count: { $sum: 1 }
-    });
-    console.log('aggregate', aggregate);
+    const matches = await ScMatch.find({});
+
+    for (item of matches) {
+        let lSco = 0;
+        let rSco = 0;
+        let finalWinner = 0;
+        
+        if (item.aPlyr === item.aGm) {
+            lSco += 1;
+        } else {
+            rSco += 1;
+        }
+
+        if (item.aPlyr === item.bGm) {
+            lSco += 1;
+        } else {
+            rSco += 1;
+        }
+
+        if (item.aPlyr === item.cGm) {
+            lSco += 1;
+        } else {
+            rSco += 1;
+        }
+
+        if (lSco >= 2) {
+            finalWinner = item.aPlyr;
+        } else {
+            finalWinner = item.bPlyr;
+        }
+
+        await ScMatch.updateOne({ '_id': item._id }, { 'lSco': lSco, 'rSco': rSco, 'finalWinner': finalWinner });
+    }
 });
 
 (async () => {
@@ -113,29 +140,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
             let finalWinner = null;
 
-            let lSco = 0;
-            let rSco = 0;
-
-            if (match.cGm === null) {
-                if (aP.user.id === match.aGm) {
-                    tWinner = '경기없음';
-                    finalWinner = aName;
-                    lSco = 2;
-                } else {
-                    tWinner = '경기없음';
-                    finalWinner = bName;
-                    rSco = 2;
-                }
+            if (match.aPlyr === match.finalWinner) {
+                finalWinner = aName;
+            } else if (match.finalWinner === 'draw') {
+                finalWinner = '무승부';
             } else {
-                if (aP.user.id === match.cGm) {
-                    finalWinner = aName;
-                    lSco = 2;
-                    rSco = 1;
-                } else {
-                    finalWinner = bName;
-                    rSco = 2;
-                    lSco = 1;
-                }
+                finalWinner = bName;
             }
 
             const nowMoment = moment(match.savedAt);
@@ -143,7 +153,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
             const content = {
                 'name': `${today}, 승리: ${finalWinner})`,
-                'value': `대진: ${aName} vs ${bName}, 스코어: [${lSco} : ${rSco}]`
+                'value': `대진: ${aName} vs ${bName}, 스코어: [${match.lSco} : ${match.rSco}]`
             }
 
             result.push(content);
@@ -361,60 +371,64 @@ client.on(Events.InteractionCreate, async interaction => {
         someMembers.push(members.get(match.aPlyr));
         someMembers.push(members.get(match.bPlyr));
 
-        if (match.aGm === match.bGm) {
+        // if (match.aGm === match.bGm) {
 
-            let winner = null;
+        //     let winner = null;
 
-            const aPlyr = members.get(match.aPlyr);
-            const bPlyr = members.get(match.bPlyr);
+        //     const aPlyr = members.get(match.aPlyr);
+        //     const bPlyr = members.get(match.bPlyr);
 
-            const aName = getPlayerName(aPlyr);
-            const bName = getPlayerName(bPlyr);
+        //     const aName = getPlayerName(aPlyr);
+        //     const bName = getPlayerName(bPlyr);
 
-            if (match.aPlyr === match.aGm) {
-                winner = aName;
-            } else {
-                winner = bName;
-            }
+        //     if (match.aPlyr === match.aGm) {
+        //         winner = aName;
+        //     } else {
+        //         winner = bName;
+        //     }
 
-            console.log('match', match);
+        //     console.log('match', match);
 
-            await ScMatch.updateOne({ _id: key }, { 'isComplete': true, 'savedAt': new Date(), 'cGm': null });
+        //     await ScMatch.updateOne({ _id: key }, { 'isComplete': true, 'savedAt': new Date(), 'cGm': null });
 
-            const resultEmbed = new EmbedBuilder()
-                .setColor('Red')
-                .setTitle('저장된 매치결과')
-                .setDescription(today)
-                .addFields(
-                    { name: '매치업', value: `${aName} vs ${bName}` },
-                    { name: '1세트: ' + match.maps[0].name, value: winner },
-                    { name: '2세트: ' + match.maps[1].name, value: winner },
-                    { name: '3세트: ' + match.maps[2].name, value: '경기없음' },
-                    { name: '승자', value: `${winner} 🔥` },
-                )
-                .setTimestamp();
+        //     const resultEmbed = new EmbedBuilder()
+        //         .setColor('Red')
+        //         .setTitle('저장된 매치결과')
+        //         .setDescription(today)
+        //         .addFields(
+        //             { name: '매치업', value: `${aName} vs ${bName}` },
+        //             { name: '1세트: ' + match.maps[0].name, value: winner },
+        //             { name: '2세트: ' + match.maps[1].name, value: winner },
+        //             { name: '3세트: ' + match.maps[2].name, value: '경기없음' },
+        //             { name: '승자', value: `${winner} 🔥` },
+        //         )
+        //         .setTimestamp();
 
-            interaction.reply({ embeds: [resultEmbed] });
+        //     interaction.reply({ embeds: [resultEmbed] });
 
-        } else {
+        // } else {
 
-            const row = new ActionRowBuilder()
-                .addComponents(
-                    new StringSelectMenuBuilder()
-                        .setCustomId('insertResultEnd||' + interaction.customId.split('||')[1])
-                        .setPlaceholder('3세트 승자')
-                        .addOptions(getPlayerOptions(someMembers))
-                );
+        let options = getPlayerOptions(someMembers);
+        options.push({
+            label: '경기없음',
+            value: 'nogame',
+        })
 
-            await interaction.reply({ content: '3세트 승자를 선택하세요', components: [row] });
-        }
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('insertResultEnd||' + interaction.customId.split('||')[1])
+                    .setPlaceholder('3세트 승자')
+                    .addOptions(options)
+            );
+
+        await interaction.reply({ content: '3세트 승자를 선택하세요', components: [row] });
+        // }
     }
 
     if (interaction.customId.split('||')[0] === 'insertResultEnd') {
 
         const match = await ScMatch.findOne({ _id: key });
-
-        let cGame = members.get(selectValues[0]).user.id;
 
         const aPlyr = members.get(match.aPlyr);
         const bPlyr = members.get(match.bPlyr);
@@ -422,27 +436,63 @@ client.on(Events.InteractionCreate, async interaction => {
         const aName = getPlayerName(aPlyr);
         const bName = getPlayerName(bPlyr);
 
+        let lSco = 0;
+        let rSco = 0;
+
         let fWinner = null;
         let sWinner = null;
         let tWinner = null;
 
+        let finalWinnerId = null;
+        let finalWinnerName = null;
+
+        let cGame = null;
+
         if (match.aPlyr === match.aGm) {
             fWinner = aName;
-            sWinner = bName;
+            lSco += 1;
         } else {
             fWinner = bName;
+            rSco += 1;
+        }
+
+        if (match.aPlyr === match.bGm) {
             sWinner = aName;
-        }
-
-        if (match.aPlyr === cGame) {
-            tWinner = aName;
+            lSco += 1;
         } else {
-            tWinner = bName;
+            sWinner = bName;
+            rSco += 1;
         }
 
-        await ScMatch.updateOne({ _id: key }, { 'cGm': cGame, 'isComplete': true, 'savedAt': new Date() });
+        const sv = selectValues[0];
 
-        console.log('match', match);
+        if (sv != 'nogame') {
+            cGame = members.get(sv).user.id;
+
+            if (match.aPlyr === cGame) {
+                tWinner = aName;
+                lSco += 1;
+            } else {
+                tWinner = bName;
+                rSco += 1;
+            }
+        } else {
+            cGame = null;
+            tWinner = '경기없음';
+        }
+
+        if (lSco >= 2) {
+            finalWinnerId = match.aPlyr;
+            finalWinnerName = getPlayerName(aPlyr);
+        } else if (lSco === 1 && rSco === 1) {
+            finalWinnerId = 'draw';
+            finalWinnerName = '무승부';
+        } else {
+            finalWinnerId = match.bPlyr;
+            finalWinnerName = getPlayerName(bPlyr);
+        }
+
+        await ScMatch.updateOne({ _id: key }, { 'cGm': cGame, 'isComplete': true, 'savedAt': new Date(), 'lSco': lSco, 'rSco': rSco, 'finalWinner': finalWinnerId });
 
         const resultEmbed = new EmbedBuilder()
             .setColor('Red')
@@ -453,7 +503,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 { name: '1세트: ' + match.maps[0].name, value: fWinner },
                 { name: '2세트: ' + match.maps[1].name, value: sWinner },
                 { name: '3세트: ' + match.maps[2].name, value: tWinner },
-                { name: '승자', value: `${tWinner} 🔥` },
+                { name: '승자', value: `${finalWinnerName} 🔥` },
             )
             .setTimestamp();
 
