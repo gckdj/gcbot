@@ -93,12 +93,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.commandName === '조회') {
 
-        const guildId = interaction.guildId;
-        const guild = await client.guilds.fetch(guildId);
-        const members = await guild.members.fetch();
-
         const matches = await ScMatch.find({ 'isComplete': true }).sort({ 'savedAt': -1 }).limit(10);
-
         const result = getMatchesResults(matches, members);
 
         let notice = null;
@@ -220,31 +215,31 @@ client.on(Events.InteractionCreate, async interaction => {
         // todo: 경기없는 경우의 메세지 출력
         const fMatches = await ScMatch.find({
             '$or': [
-                {'aPlyr': fMem.user.id},
-                {'bPlyr': fMem.user.id}
+                { 'aPlyr': fMem.user.id },
+                { 'bPlyr': fMem.user.id }
             ]
         });
-        
+
         let firstEmbed = new EmbedBuilder()
             .setColor('Red')
             .setTitle(`1위: ${fMemName}`)
-        	.setDescription(`이 플레이어는 지난 ${result[0].total}세트 중 ${result[0].win}세트를 승리하며 ${Math.round(result[0].winPercent * 1000) / 10}%의 승률을 기록했습니다.`);
+            .setDescription(`이 플레이어는 지난 ${result[0].total}세트 중 ${result[0].win}세트를 승리하며 ${Math.round(result[0].winPercent * 1000) / 10}%의 승률을 기록했습니다.`);
 
         const fResults = getMatchesResults(fMatches, members);
         fResults.forEach(item => {
-           firstEmbed.addFields(item); 
+            firstEmbed.addFields(item);
         });
 
         let secondEmbed = new EmbedBuilder()
             .setColor('Blue')
             .setTitle('다른 플레이어들')
-        	.setDescription('이번달 매치를 진행한 모든 플레이어의 통계입니다.');
+            .setDescription('이번달 매치를 진행한 모든 플레이어의 통계입니다.');
 
         for (let idx = 1; idx < result.length; idx++) {
             const user = members.get(result[idx]._id);
             const userName = getPlayerName(user);
-            
-            secondEmbed.addFields({'name': `${idx + 1}위: ${userName}`, 'value': `${result[idx].total}전 ${result[idx].win}승, 승률: ${Math.round(result[idx].winPercent * 1000) / 10}%`});
+
+            secondEmbed.addFields({ 'name': `${idx + 1}위: ${userName}`, 'value': `${result[idx].total}전 ${result[idx].win}승, 승률: ${Math.round(result[idx].winPercent * 1000) / 10}%` });
         }
 
         await interaction.reply({ embeds: [firstEmbed, secondEmbed] });
@@ -252,64 +247,64 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.commandName === '롤내입') {
         const modal = new ModalBuilder()
-			.setCustomId('insertLoLInnerMatchModal')
-			.setTitle('내전결과 입력');
+            .setCustomId('insertLoLInnerMatchModal')
+            .setTitle('내전결과 입력');
 
         const othersideInput = new TextInputBuilder()
-			.setCustomId('othersideInput')
-			.setLabel('내전명을 입력하세요.')
+            .setCustomId('othersideInput')
+            .setLabel('내전명을 입력하세요.')
             .setPlaceholder('거상팀 1세트 or 팽실딱팀 2세트...')
-			.setStyle(TextInputStyle.Short);
+            .setStyle(TextInputStyle.Short);
 
         const membersInput = new TextInputBuilder()
-			.setCustomId('membersInput')
-			.setLabel('아군멤버를 입력하세요. * 탑 ~ 서폿순 // "," 구분')
+            .setCustomId('membersInput')
+            .setLabel('아군멤버를 입력하세요. * 탑 ~ 서폿순 // "," 구분')
             .setPlaceholder('김동진,김웅비,박태진,변현성,남기준')
-			.setStyle(TextInputStyle.Short);
+            .setStyle(TextInputStyle.Short);
 
         const resultInput = new TextInputBuilder()
-			.setCustomId('resultInput')
-			.setLabel('승패여부를 입력하세요')
+            .setCustomId('resultInput')
+            .setLabel('승패여부를 입력하세요')
             .setPlaceholder('승리 or 패배')
-			.setStyle(TextInputStyle.Short);
+            .setStyle(TextInputStyle.Short);
 
         const urlInput = new TextInputBuilder()
-			.setCustomId('urlInput')
-			.setLabel('경기결과 캡쳐링크를 첨부하세요.')
+            .setCustomId('urlInput')
+            .setLabel('경기결과 캡쳐링크를 첨부하세요.')
             .setPlaceholder('discord 내 업로드된 이미지링크')
-			.setStyle(TextInputStyle.Short);
+            .setStyle(TextInputStyle.Short);
 
-		const fActionRow = new ActionRowBuilder().addComponents(othersideInput);
-		const sActionRow = new ActionRowBuilder().addComponents(membersInput);
+        const fActionRow = new ActionRowBuilder().addComponents(othersideInput);
+        const sActionRow = new ActionRowBuilder().addComponents(membersInput);
         const tActionRow = new ActionRowBuilder().addComponents(resultInput);
         const urlActionRow = new ActionRowBuilder().addComponents(urlInput);
-        
-		modal.addComponents(fActionRow, sActionRow, tActionRow, urlActionRow);
-        
+
+        modal.addComponents(fActionRow, sActionRow, tActionRow, urlActionRow);
+
         await interaction.showModal(modal);
     }
 });
 
 // 모달 서브밋 이벤트
 client.on(Events.InteractionCreate, async interaction => {
-	if (!interaction.isModalSubmit()) {
-        return;  
+    if (!interaction.isModalSubmit()) {
+        return;
     }
-    
-	if (interaction.customId === 'insertLoLInnerMatchModal') {
 
-        const res = interaction.get('fields');
+    if (interaction.customId === 'insertLoLInnerMatchModal') {
 
-        console.log('res', res.fields;
-        
-        const mems = res.membersInput.value.split(',');
+        console.log(interaction);
+
+        const res = interaction;
+
+        const mems = res.get('membersInput').value.split(',');
 
         let isWin = 0;
 
-        if (res.resultInput.value === '승리') {
+        if (res.get('resultInput').value === '승리') {
             isWin = 1;
         }
-        const data = { 'top': mems[0], 'jug': mems[1], 'mid': mems[2], 'adc': mems[3], 'spt': mems[4], 'name': res.othersideInput.value, 'isWin': isWin, 'captureUrl': res.urlInput.value, 'savedAt': new Date() }
+        const data = { 'top': mems[0], 'jug': mems[1], 'mid': mems[2], 'adc': mems[3], 'spt': mems[4], 'name': res.get('othersideInput').value, 'isWin': isWin, 'captureUrl': res.get('urlInput').value, 'savedAt': new Date() }
 
         await LolSet.insertOne(data, (err, docs) => {
             if (err) {
@@ -317,8 +312,8 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         });
 
-		await interaction.reply({ content: '기록 입력이 완료되었습니다.' });
-	}
+        await interaction.reply({ content: '기록 입력이 완료되었습니다.' });
+    }
 });
 
 // 버튼 상호작용
@@ -533,7 +528,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (match.aPlyr === match.aGm) {
             fWinner = aName;
             lSco += 1;
-            
+
             setResults.push({ 'matchId': key, 'plyr': match.aPlyr, 'isWin': 1, 'set': 1, 'savedAt': new Date() });
             setResults.push({ 'matchId': key, 'plyr': match.bPlyr, 'isWin': 0, 'set': 1, 'savedAt': new Date() });
         } else {
@@ -594,12 +589,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
         await ScMatch.updateOne({ _id: key }, { 'cGm': cGame, 'isComplete': true, 'savedAt': new Date(), 'lSco': lSco, 'rSco': rSco, 'finalWinner': finalWinnerId });
 
-        await ScSetResult.insertMany(setResults, (err, docs) => {
+        ScSetResult.insertMany(setResults, (err, docs) => {
             if (err) {
                 console.log(err);
             }
         });
-        
+
         const resultEmbed = new EmbedBuilder()
             .setColor('Red')
             .setTitle('저장된 매치결과')
@@ -651,7 +646,7 @@ function getPlayerOptions(members) {
 function getMatchesResults(matches, members) {
 
     let result = [];
-    
+
     matches.forEach(match => {
         const aP = members.get(match.aPlyr);
         const bP = members.get(match.bPlyr);

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +21,11 @@
     "moment-timezone": "^0.5.40",
     "mongoose": "^6.8.3",
     "node-fetch": "^3.3.0",
+    "nodemon": "^2.0.20",
     "random-js": "^2.1.0",
     "request": "^2.88.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.32.0"
   }
 }
