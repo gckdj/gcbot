@@ -1,9 +1,8 @@
-const { Client, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, interaction, EmbedBuilder, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { commands } = require('./command.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, interaction, EmbedBuilder, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Random } = require("random-js");
-const random = new Random();
 const keepAlive = require('./server.js');
-const fetch = require('@replit/node-fetch');
 const moment = require('moment');
 require('moment-timezone');
 moment.locale('ko');
@@ -11,7 +10,6 @@ moment.tz.setDefault("Asia/Seoul");
 
 const mongoose = require('mongoose');
 const ScMatch = require('./schemas/scmatch.js');
-const ScMap = require('./schemas/scmap.js');
 const ScSetResult = require('./schemas/scsetresult.js');
 const LolSet = require('./schemas/lolset.js');
 
@@ -19,10 +17,32 @@ const applicaitonId = process.env['application_id'];
 const token = process.env['token'];
 const clientId = process.env['client_id'];
 const uri = process.env['uri'];
-const kakao = process.env['kakaoAPI'];
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+client.commands = new Collection();
 const rest = new REST({ version: '10' }).setToken(token);
+
+const commands = [];
+const commandsPath = path.join(__dirname, 'commands');
+
+const recursiveReadFiles = (filePath) => {
+    fs.readdirSync(filePath, { withFileTypes: true })
+        .forEach(file => {
+            if (file.isDirectory()) {
+                const newPath = filePath + '/' + file.name;
+                recursiveReadFiles(newPath);
+            } else {
+                if (file.name.endsWith('.js')) {
+                    const command = require(`${filePath}/${file.name}`);
+                    commands.push(command.data.toJSON());
+                    console.log(command);
+                    client.commands.set(command.data.name, command);
+                }
+            }
+        });
+}
+
+recursiveReadFiles(commandsPath);
 
 mongoose.connect(uri, {
     dbName: 'Gcbot',
@@ -39,15 +59,15 @@ mongoose.connection.on('open', async function() {
 
 (async () => {
     try {
-        await rest.put(Routes.applicationCommands(clientId, applicaitonId), { body: commands });
-        console.log('Successfully reloaded application (/) commands.');
+        console.log('commands', commands);
+        const result = await rest.put(Routes.applicationCommands(clientId), { body: commands });
     } catch (error) {
         console.error(error);
     }
 })();
 
 client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+    console.log(`[디스코드 API 로그인 완료: ${client.user.tag}]`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -56,232 +76,18 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
-    const guildId = interaction.guildId;
-    const guild = await client.guilds.fetch(guildId);
-    const members = await guild.members.fetch();
+    const command = interaction.client.commands.get(interaction.commandName);
 
-    if (interaction.commandName === '뽑기') {
-
-        const maps = await ScMap.find({ 'isUsing': true }).sort({ 'people': 1, 'description': 'asc' });
-
-        let embed = new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('맵 리스트')
-            .setURL('https://910map.tistory.com/');
-
-        maps.forEach(map => {
-            const field = {
-                'name': map.name,
-                'value': map.description,
-                'inline': false,
-            }
-
-            embed.addFields(field);
-        });
-
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('noban')
-                    .setLabel('맵 뽑기')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🏹')
-            );
-
-        await interaction.reply({ embeds: [embed], components: [row] });
+    if (!command) {
+        console.error(`찾을 수 없는 명령어[입력내용: ${interaction.commandName}]`);
+        return;
     }
 
-    if (interaction.commandName === '조회') {
-
-        const matches = await ScMatch.find({ 'isComplete': true }).sort({ 'savedAt': -1 }).limit(10);
-        const result = getMatchesResults(matches, members);
-
-        let notice = null;
-
-        if (matches.length === 0) {
-            notice = '조회된 결과가 없습니다.';
-        } else {
-            notice = '최근 매치결과입니다.';
-        }
-
-        let matchList = new EmbedBuilder()
-            .setColor('Red')
-            .setTitle('매치 결과조회')
-            .setDescription(notice)
-            .setTimestamp();
-
-        result.forEach(item => {
-            matchList.addFields(item);
-        });
-
-        interaction.reply({ embeds: [matchList] });
-    }
-
-    if (interaction.commandName === '카페' || interaction.commandName === '맛집') {
-
-        let searchSize = 5;
-        let randomPage = 1;
-        let embed = null;
-        let keyword = null;
-
-        if (interaction.commandName === '카페') {
-            keyword = '거창 카페';
-        } else {
-            const keywords = ['거창 고기, 거창 한식', '거창 중식', '거창 일식', '거창 맛집'];
-            keyword = keywords[random.integer(0, keywords.length - 1)];
-        }
-
-        let uri = `https://dapi.kakao.com/v2/local/search/keyword.json?page=${randomPage}&size=${searchSize}&sort=accuracy&query=${keyword}`;
-
-        let query = encodeURI(uri);
-
-        await fetch(query, {
-            'headers': {
-                Authorization: `KakaoAK ${kakao}`,
-            }
-        })
-            .then(res => {
-                return res.json()
-            })
-            .then(data => {
-                const maxPageCount = Math.ceil(data.meta.pageable_count / searchSize);
-                randomPage = random.integer(1, maxPageCount);
-            });
-
-        uri = `https://dapi.kakao.com/v2/local/search/keyword.json?page=${randomPage}&size=${searchSize}&sort=accuracy&query=${keyword}`;
-        query = encodeURI(uri);
-
-        await fetch(query, {
-            'headers': {
-                Authorization: `KakaoAK ${kakao}`,
-            }
-        })
-            .then(res => {
-                return res.json();
-            })
-            .then(data => {
-                embed = new EmbedBuilder()
-                    .setColor('Red')
-                    .setTitle('검색된 결과')
-
-                data.documents.forEach(item => {
-                    embed.addFields({ name: item.place_name, value: item.place_url });
-                });
-            });
-
-        await interaction.reply({ embeds: [embed] });
-    }
-
-    if (interaction.commandName === '이달슷') {
-
-        const date = new Date();
-        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
-        const result = await ScSetResult.aggregate([
-            {
-                '$match': {
-                    'savedAt': { '$gte': firstDay, '$lt': lastDay }
-                }
-            },
-            {
-                '$group': {
-                    '_id': '$plyr',
-                    'total': { '$sum': 1 },
-                    'win': {
-                        '$sum': '$isWin'
-                    }
-                },
-            },
-            {
-                '$addFields': {
-                    'winPercent': {
-                        '$divide':
-                            ['$win', '$total']
-                    }
-                },
-            },
-            {
-                '$sort': {
-                    'winPercent': -1
-                }
-            }
-        ]);
-
-        const fMem = members.get(result[0]._id);
-        const fMemName = getPlayerName(fMem);
-
-        // todo: 기간 조건절 추가
-        // todo: 경기없는 경우의 메세지 출력
-        const fMatches = await ScMatch.find({
-            '$or': [
-                { 'aPlyr': fMem.user.id },
-                { 'bPlyr': fMem.user.id }
-            ]
-        });
-
-        let firstEmbed = new EmbedBuilder()
-            .setColor('Red')
-            .setTitle(`1위: ${fMemName}`)
-            .setDescription(`이 플레이어는 지난 ${result[0].total}세트 중 ${result[0].win}세트를 승리하며 ${Math.round(result[0].winPercent * 1000) / 10}%의 승률을 기록했습니다.`);
-
-        const fResults = getMatchesResults(fMatches, members);
-        fResults.forEach(item => {
-            firstEmbed.addFields(item);
-        });
-
-        let secondEmbed = new EmbedBuilder()
-            .setColor('Blue')
-            .setTitle('다른 플레이어들')
-            .setDescription('이번달 매치를 진행한 모든 플레이어의 통계입니다.');
-
-        for (let idx = 1; idx < result.length; idx++) {
-            const user = members.get(result[idx]._id);
-            const userName = getPlayerName(user);
-
-            secondEmbed.addFields({ 'name': `${idx + 1}위: ${userName}`, 'value': `${result[idx].total}전 ${result[idx].win}승, 승률: ${Math.round(result[idx].winPercent * 1000) / 10}%` });
-        }
-
-        await interaction.reply({ embeds: [firstEmbed, secondEmbed] });
-    }
-
-    if (interaction.commandName === '롤내입') {
-        const modal = new ModalBuilder()
-            .setCustomId('insertLoLInnerMatchModal')
-            .setTitle('내전결과 입력');
-
-        const othersideInput = new TextInputBuilder()
-            .setCustomId('othersideInput')
-            .setLabel('내전명을 입력하세요.')
-            .setPlaceholder('거상팀 1세트 or 팽실딱팀 2세트...')
-            .setStyle(TextInputStyle.Short);
-
-        const membersInput = new TextInputBuilder()
-            .setCustomId('membersInput')
-            .setLabel('아군멤버를 입력하세요. * 탑 ~ 서폿순 // "," 구분')
-            .setPlaceholder('김동진,김웅비,박태진,변현성,남기준')
-            .setStyle(TextInputStyle.Short);
-
-        const resultInput = new TextInputBuilder()
-            .setCustomId('resultInput')
-            .setLabel('승패여부를 입력하세요')
-            .setPlaceholder('승리 or 패배')
-            .setStyle(TextInputStyle.Short);
-
-        const urlInput = new TextInputBuilder()
-            .setCustomId('urlInput')
-            .setLabel('경기결과 캡쳐링크를 첨부하세요.')
-            .setPlaceholder('discord 내 업로드된 이미지링크')
-            .setStyle(TextInputStyle.Short);
-
-        const fActionRow = new ActionRowBuilder().addComponents(othersideInput);
-        const sActionRow = new ActionRowBuilder().addComponents(membersInput);
-        const tActionRow = new ActionRowBuilder().addComponents(resultInput);
-        const urlActionRow = new ActionRowBuilder().addComponents(urlInput);
-
-        modal.addComponents(fActionRow, sActionRow, tActionRow, urlActionRow);
-
-        await interaction.showModal(modal);
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: '존재하지 않는 명령어입니다.', ephemeral: true });
     }
 });
 
@@ -294,25 +100,6 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId === 'insertLoLInnerMatchModal') {
 
         console.log(interaction);
-
-        const res = interaction;
-
-        const mems = res.get('membersInput').value.split(',');
-
-        let isWin = 0;
-
-        if (res.get('resultInput').value === '승리') {
-            isWin = 1;
-        }
-        const data = { 'top': mems[0], 'jug': mems[1], 'mid': mems[2], 'adc': mems[3], 'spt': mems[4], 'name': res.get('othersideInput').value, 'isWin': isWin, 'captureUrl': res.get('urlInput').value, 'savedAt': new Date() }
-
-        await LolSet.insertOne(data, (err, docs) => {
-            if (err) {
-                console.log(err);
-            }
-        });
-
-        await interaction.reply({ content: '기록 입력이 완료되었습니다.' });
     }
 });
 
