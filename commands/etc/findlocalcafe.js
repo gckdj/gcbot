@@ -1,41 +1,41 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const fetch = require('@replit/node-fetch');
 const kakao = process.env['kakaoAPI'];
-const { Random } = require("random-js");
-const random = new Random();
+const gcUtils = require('../../gcbotutils.js');
+const fetch = gcUtils.getFetch();
+const random = gcUtils.getRandom();
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('카페')
         .setDescription('거창 소재의 카페를 추천합니다.'),
-    async execute (interaction) {
+    async execute(interaction) {
 
         let searchSize = 5;
         let randomPage = 1;
         let embed = null;
-        
+
         const keyword = '거창 카페';
-        
+
         let uri = `https://dapi.kakao.com/v2/local/search/keyword.json?page=${randomPage}&size=${searchSize}&sort=accuracy&query=${keyword}`;
-        
+
         let query = encodeURI(uri);
-        
+
         await fetch(query, {
             'headers': {
                 Authorization: `KakaoAK ${kakao}`,
             }
         })
-        .then(res => {
-            return res.json()
-        })
-        .then(data => {
-            const maxPageCount = Math.ceil(data.meta.pageable_count / searchSize);
-            randomPage = random.integer(1, maxPageCount);
-        });
-        
+            .then(res => {
+                return res.json()
+            })
+            .then(data => {
+                const maxPageCount = Math.ceil(data.meta.pageable_count / searchSize);
+                randomPage = random.integer(1, maxPageCount);
+            });
+
         uri = `https://dapi.kakao.com/v2/local/search/keyword.json?page=${randomPage}&size=${searchSize}&sort=accuracy&query=${keyword}`;
         query = encodeURI(uri);
-        
+
         await fetch(query, {
             'headers': {
                 Authorization: `KakaoAK ${kakao}`,
@@ -48,12 +48,12 @@ module.exports = {
                 embed = new EmbedBuilder()
                     .setColor('Red')
                     .setTitle('검색된 결과')
-        
+
                 data.documents.forEach(item => {
                     embed.addFields({ name: item.place_name, value: item.place_url });
                 });
             });
-        
+
         await interaction.reply({ embeds: [embed] });
     }
 }
