@@ -7,7 +7,7 @@ server.all('/', (req, res) => {
 
 function keepAlive() {
     server.listen(3000, ()=> {
-        console.log('서버 준비 완료');
+        console.log('[express 준비 완료]');
     })
 }
 
