@@ -2,12 +2,15 @@ const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord
 const fs = require('node:fs');
 const path = require('node:path');
 const keepAlive = require('./server.js');
+const gcUtils = require('./gcbotutils.js');
+const fetch = gcUtils.getFetch();
 
 const mongoose = require('mongoose');
 
 const token = process.env['token'];
 const clientId = process.env['client_id'];
 const atlasURI = process.env['uri'];
+const lolKey = process.env['lolApiKey'];
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 client.commands = new Collection();
@@ -79,10 +82,41 @@ mongoose.connection.on('open', async function() {
     try {
         const result = await rest.put(Routes.applicationCommands(clientId), { body: commands });
         console.log(`[디스코드 명령어 ${result.length}건 등록완료]`);
-    } catch (error) {
-        console.error(error);
-    }
-})();
 
-keepAlive();
-client.login(token);
+        const mems = ['엘카프', '롤영역', '아란드라', '신 실', '울부짖는 구인모'];
+
+        mems.forEach(async (item) => {
+            let url = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${encodeURI(item)}?api_key=${lolKey}`;
+
+            await fetch(url).then((res) => {
+                return res.json();
+            }).then((res) => {
+                const puuid = res.puuid;
+
+
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }) ();
+
+    // setTimeout(() => {
+    //     const mems = ['엘카프', '롤영역', '아란드라', '신실', '울부짖는 구인모'];
+
+    //     mems.forEach((item) => {
+    //         let url = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${item}?api_key=${lolKey}`
+
+    //         await fetch(url, {
+
+    //         }).then(res => {
+    //             return res.json();
+    //         }).then(res => {
+    //             console.log('res', res);
+    //         });
+    //     });
+    // }, 3000);
+
+
+
+    keepAlive();
+    client.login(token);
