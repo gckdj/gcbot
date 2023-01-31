@@ -78,6 +78,8 @@ mongoose.connection.on('open', async function() {
     console.log('mongoose opened');
 });
 
+
+const puuid = 
 (async () => {
     try {
         const result = await rest.put(Routes.applicationCommands(clientId), { body: commands });
@@ -86,37 +88,46 @@ mongoose.connection.on('open', async function() {
         const mems = ['엘카프', '롤영역', '아란드라', '신 실', '울부짖는 구인모'];
 
         mems.forEach(async (item) => {
-            let url = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${encodeURI(item)}?api_key=${lolKey}`;
+            let sumUrl = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${encodeURI(item)}?api_key=${lolKey}`;
 
-            await fetch(url).then((res) => {
-                return res.json();
-            }).then((res) => {
-                const puuid = res.puuid;
+            await fetch(sumUrl).then((res) => {
+                const data = res.json();
+                const puuid = data.puuid;
 
+                let matchUrl = `https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=20&api_key=${lolKey}`;
 
+                await fetch(matchUrl = ``)
+            }).then((res) => {                
+
+                await fetch(matchUrl).then((res) => {
+
+                });
+
+                let url = ``
             });
-        } catch (error) {
-            console.error(error);
-        }
-    }) ();
+        });
+    } catch (error) {
+        console.error(error);
+    }
+});
 
-    // setTimeout(() => {
-    //     const mems = ['엘카프', '롤영역', '아란드라', '신실', '울부짖는 구인모'];
+// setTimeout(() => {
+//     const mems = ['엘카프', '롤영역', '아란드라', '신실', '울부짖는 구인모'];
 
-    //     mems.forEach((item) => {
-    //         let url = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${item}?api_key=${lolKey}`
+//     mems.forEach((item) => {
+//         let url = `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/${item}?api_key=${lolKey}`
 
-    //         await fetch(url, {
+//         await fetch(url, {
 
-    //         }).then(res => {
-    //             return res.json();
-    //         }).then(res => {
-    //             console.log('res', res);
-    //         });
-    //     });
-    // }, 3000);
+//         }).then(res => {
+//             return res.json();
+//         }).then(res => {
+//             console.log('res', res);
+//         });
+//     });
+// }, 3000);
 
 
 
-    keepAlive();
-    client.login(token);
+keepAlive();
+client.login(token);
