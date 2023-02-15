@@ -85,7 +85,7 @@ mongoose.connection.on('open', async function() {
         const result = await rest.put(Routes.applicationCommands(clientId), { body: commands });
         console.log(`[디스코드 명령어 ${result.length}건 등록완료]`);
 
-        setTimeout(() => {
+        setInterval(() => {
             showPlayer();
         }, 300000)
         showPlayer();
@@ -167,6 +167,9 @@ const p7 = {
 
 
 function showPlayer() {
+
+    console.log(`[runtime ${moment()}]`)
+    
     const players = [p1, p2, p3, p4, p5, p6, p7];
 
     players.forEach(async (p) => {
