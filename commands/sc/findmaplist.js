@@ -4,7 +4,7 @@ const ScMap = require('../../schemas/scmap.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('슷뽑기')
-        .setDescription('랜덤으로 슷맵을 선정합니다.'),
+        .setDescription('매치를 위한 맵을 선정합니다.'),
     async execute(interaction) {
         const maps = await ScMap.find({ 'isUsing': true }).sort({ 'people': 1, 'description': 'asc' });
 

@@ -7,7 +7,7 @@ const fetch = gcUtils.getFetch();
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('슷통계')
-        .setDescription('모든 플레이어의 전적 및 이달의 슷플레이어를 조회합니다.'),
+        .setDescription('베스트 플레이어를 조회합니다.'),
     async execute(interaction) {
 
         const guildId = interaction.guildId;

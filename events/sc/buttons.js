@@ -51,7 +51,7 @@ module.exports = {
             const nice = new EmbedBuilder()
                 .setColor('Red')
                 .setURL('https://910map.tistory.com/')
-                .setTitle('맵 선택결과')
+                .setTitle('선택된 맵입니다.')
                 .addFields(
                     { name: '1경기', value: matchMaps[0].name },
                     { name: '2경기', value: matchMaps[1].name },
@@ -71,7 +71,7 @@ module.exports = {
                 .addComponents(
                     new ButtonBuilder()
                         .setCustomId('insertResultStart||' + match._id)
-                        .setLabel('이 매치의 결과를 입력할게요')
+                        .setLabel('이 매치의 결과를 입력할게요.')
                         .setStyle(ButtonStyle.Success)
                         .setEmoji('🖋')
                 );
@@ -85,11 +85,11 @@ module.exports = {
                 .addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId('selectPlayer1||' + interaction.customId.split('||')[1])
-                        .setPlaceholder('플레이어1 선택')
+                        .setPlaceholder('플레이어 리스트')
                         .addOptions(gcUtils.getPlayerOptions(members))
                 );
 
-            await interaction.reply({ content: '플레이어1을 선택하세요', components: [row] });
+            await interaction.reply({ content: '첫번째 플레이어를 선택하세요.', components: [row] });
         }
     },
 };

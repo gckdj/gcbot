@@ -30,11 +30,11 @@ module.exports = {
                 .addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId('selectPlayer2||' + key)
-                        .setPlaceholder('플레이어2 선택')
+                        .setPlaceholder('플레이어 리스트')
                         .addOptions(gcUtils.getPlayerOptions(members))
                 );
 
-            await interaction.reply({ content: '플레이어2를 선택하세요', components: [row] });
+            await interaction.reply({ content: '두번째 플레이어를 선택하세요.', components: [row] });
         }
 
         if (interaction.customId.split('||')[0] === 'selectPlayer2') {
@@ -51,11 +51,11 @@ module.exports = {
                 .addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId('firstGameWinner||' + interaction.customId.split('||')[1])
-                        .setPlaceholder('1세트 승자')
+                        .setPlaceholder('플레이어 리스트')
                         .addOptions(gcUtils.getPlayerOptions(someMembers))
                 );
 
-            await interaction.reply({ content: '1세트 승자를 선택하세요', components: [row] });
+            await interaction.reply({ content: '첫번째 세트 승리 플레이어를 선택하세요.', components: [row] });
         }
 
         if (interaction.customId.split('||')[0] === 'firstGameWinner') {
@@ -72,11 +72,11 @@ module.exports = {
                 .addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId('secondGameWinner||' + interaction.customId.split('||')[1])
-                        .setPlaceholder('2세트 승자')
+                        .setPlaceholder('플레이어 리스트')
                         .addOptions(gcUtils.getPlayerOptions(someMembers))
                 );
 
-            await interaction.reply({ content: '2세트 승자를 선택하세요', components: [row] });
+            await interaction.reply({ content: '두번째 세트 승리 플레이어를 선택하세요.', components: [row] });
         }
 
         if (interaction.customId.split('||')[0] === 'secondGameWinner') {
@@ -99,11 +99,11 @@ module.exports = {
                 .addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId('insertResultEnd||' + interaction.customId.split('||')[1])
-                        .setPlaceholder('3세트 승자')
+                        .setPlaceholder('플레이어 리스트')
                         .addOptions(options)
                 );
 
-            await interaction.reply({ content: '3세트 승자를 선택하세요', components: [row] });
+            await interaction.reply({ content: '세번째 세트 승리 플레이어를 선택하세요.', components: [row] });
         }
 
         if (interaction.customId.split('||')[0] === 'insertResultEnd') {
@@ -202,7 +202,7 @@ module.exports = {
 
             const resultEmbed = new EmbedBuilder()
                 .setColor('Red')
-                .setTitle('저장된 매치결과')
+                .setTitle('저장된 매치결과입니다.')
                 .setDescription(today)
                 .addFields(
                     { name: '매치업', value: `${aName} vs ${bName}` },

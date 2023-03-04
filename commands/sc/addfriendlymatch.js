@@ -4,11 +4,9 @@ const gcUtils = require('../../gcbotutils.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('슷단판')
-        .setDescription('슷단판 입력'),
+        .setName('슷친선')
+        .setDescription('친선매치를 입력합니다.'),
     async execute(interaction) {
-        const maps = await ScMap.find({ 'isUsing': true }).sort({ 'people': 1, 'description': 'asc' });
-
         const guildId = interaction.guildId;
         const guild = await interaction.client.guilds.fetch(guildId);
         const members = await guild.members.fetch();
@@ -17,12 +15,12 @@ module.exports = {
             .addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('completeSelectUsers')
-                    .setPlaceholder('참여한 유저선택')
+                    .setPlaceholder('플레이어 리스트')
                     .setMinValues(2)
                     .setMaxValues(2)
                     .addOptions(gcUtils.getPlayerOptions(members))
             );
 
-        await interaction.reply({ components: [row] });
+        await interaction.reply({ content: '매치를 진행한 2명의 플레이어를 선택하세요.', components: [row] });
     }
 }

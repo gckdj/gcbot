@@ -17,6 +17,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 client.commands = new Collection();
 const rest = new REST({ version: '10' }).setToken(token);
 
+const discordModals = require('discord-modals');
+discordModals(client);
+
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
 
@@ -165,12 +168,30 @@ const p7 = {
     "summonerLevel": 440
 }
 
+const p8 = {
+    "id": "w8ugAAozFdO7sTwrEzknKeneFKYtqtka4n9OndpwKUKC8g",
+    "accountId": "xFXeefolC2Mwz9drN6zDHXAAiJ4BqlvzjU3dgX-aM1cV",
+    "puuid": "KcD4vXhkEjjtsq0PEcAZELTOxS7rccppUdsqsDSdqlzJYJCONtzgpiE8oLomAIfbT2ZfyVsxreMUwA",
+    "name": "또또가또",
+    "profileIconId": 4,
+    "revisionDate": 1677071892000,
+    "summonerLevel": 75
+}
+
+const p9 = {
+    "id": "n83wgS93QTARcl2ixDDE_p2xFZeqrPH-YHXuCegWkuzw6Ic",
+    "accountId": "bT2ZX5HKvFNJw-IUhFRgAv-YRUBtqa_jhIBbOo_ymQU0uKmEVzctD4Xv",
+    "puuid": "G5Cc0i9yiAuN4hndw7UFxU12lgrIk-VvrHJITdhn8SrKx-Q8S5JBgtDB2JqF4chhqA9ppieVXk6J1A",
+    "name": "남는데누누감",
+    "profileIconId": 4,
+    "revisionDate": 1677159923574,
+    "summonerLevel": 136
+}
+
 
 function showPlayer() {
 
-    console.log(`[runtime ${moment()}]`)
-    
-    const players = [p1, p2, p3, p4, p5, p6, p7];
+    const players = [p1, p2, p3, p4, p5, p6, p7, p8, p9];
 
     players.forEach(async (p) => {
         const startTime = moment().subtract(5, 'm').unix();
@@ -221,7 +242,7 @@ async function sendMatchResult(gc) {
     }
 
     const title = `${gc.summonerName}님이 ${isWin}했습니다.`;
-    const des = `${gc.championName}[${gc.kills}/${gc.deaths}/${gc.assists}], ${gc.lane}, dpm : ${String(gc.challenges.damagePerMinute).substring(0, 6)}`;
+    const des = `${gc.championName}[${gc.kills}/${gc.deaths}/${gc.assists}], ${gc.individualPosition}, dpm : ${String(gc.challenges.damagePerMinute).substring(0, 6)}`;
     console.log(gc);
 
     const embed = new EmbedBuilder()

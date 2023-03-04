@@ -74,5 +74,41 @@ module.exports = {
         });
 
         return result;
+    },
+    getFMatchResult: (matches, members) => {
+
+        const result = [];
+
+        matches.forEach(match => {
+            const aP = members.get(match.aPlyr);
+            const bP = members.get(match.bPlyr);
+
+            const aName = module.exports.getPlayerName(aP);
+            const bName = module.exports.getPlayerName(bP);
+
+            let finalWinner = null;
+
+            if (match.aPlyr === match.finalWinner) {
+                finalWinner = aName;
+            } else if (match.finalWinner === 'draw') {
+                finalWinner = '무승부';
+            } else {
+                finalWinner = bName;
+            }
+
+            console.log(match);
+
+            const nowMoment = moment(match.savedAt);
+            const today = nowMoment.format('YYYY/MM/DD HH:mm:ss');
+
+            const content = {
+                'name': `${today}, 승 : ${finalWinner})`,
+                'value': `[대진 : ${aName} vs ${bName}, 맵 : ${match.maps.name}]`
+            }
+
+            result.push(content);
+        });
+
+        return result;
     }
 }
